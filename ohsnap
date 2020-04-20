@@ -29,9 +29,9 @@ usage() {
   echo "ohsnap will create a (recursive) snapshot on DATASET and run the given COMMAND"
   echo "once for DATASET (and possibly each of its child datasets). The COMMAND can"
   echo "access the following environment variables:"
-  echo "  OHSNAP_DATASET  name of the current dataset (filesystem or volume)"
-  echo "  OHSNAP_SNAPSHOT name of the current snapshot on the DATASET"
-  echo "  OHSNAP_TIME     timestamp of the snapshot in ISO8601 format"
+  echo "  OHSNAP_DATASET    name of the current dataset (filesystem or volume)"
+  echo "  OHSNAP_SNAPSHOT   name of the current snapshot on the DATASET"
+  echo "  OHSNAP_TIMESTAMP  timestamp of the snapshot in ISO8601 format"
 }
 
 debug() {
