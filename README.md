@@ -39,7 +39,7 @@ Finally, I found it useful to use a wrapper around borg to set the local environ
 #!/bin/sh
 
 export BORG_CACHE_DIR="/mnt/tank/local/.cache/borg"
-export BORG_CONFIG_DIR="/mnt/tank/local.config/borg"
+export BORG_CONFIG_DIR="/mnt/tank/local/.config/borg"
 
 export BORG_RSH="ssh -i /mnt/tank/local/.ssh/id_ed25519 -p 23 -o ChallengeResponseAuthentication=no -o PasswordAuthentication=no -o BatchMode=yes"
 export BORG_REPO="u123456@u123456.your-storagebox.de:borg"
