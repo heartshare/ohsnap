@@ -50,7 +50,7 @@ export BORG_KEY_FILE="/mnt/tank/local/.config/borg/keys/u123456_your_storagebox_
 /mnt/tank/local/borg-freebsd64 "$@"
 ````
 
-### Restore
+## Restore
 
 In FreeBSD (and FreeNAS), you need to mount the fuse kernel module first. Then, you can mount a borg archive using our wrapper
 
