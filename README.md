@@ -7,12 +7,12 @@ This tool is especially useful to create backups with [borg](https://borgbackup.
 ## Example invocation
 
 ```shell
-/mnt/tank/local/ohsnap/ohsnap -v --recursive --mount /var/run/ohsnap -- tank /mnt/tank/local/borg/backup_dataset
+/mnt/tank/local/ohsnap/ohsnap -v --recursive --mount /var/run/ohsnap -- tank /mnt/tank/local/backup_dataset
 ```
 
 See `ohsnap --help` for details.
 
-For this to work, you need a backup script to handle each snapshot. This script can look as follows. Of course, you can adapt it according to your specific needs.
+For this to work, you need a backup script to handle each snapshot. This script can look as follows. Of course, you can adapt it according to your specific needs. According to the above invocation, this script is in `/mnt/tank/local/backup_dataset`.
 
 ```shell
 BORG="/mnt/tank/local/borg_wrapper"
@@ -33,21 +33,21 @@ archive="${OHSNAP_DATASET////::}"
   --keep-monthly=13
 ```
 
-Finally, I found it useul to use a wrapper around borg to set the local environment on each invocation. That way. you can easily mount backups and adjust things as required. I have added the wrapper script in `/mnt/tank/local/borg_wrapper`
+Finally, I found it useful to use a wrapper around borg to set the local environment on each invocation. That way. you can easily mount backups and adjust things as required. I have added the wrapper script in `/mnt/tank/local/borg_wrapper`
 
 ```shell
 #!/bin/sh
 
-export BORG_CACHE_DIR="/mnt/tank/local/borg/.cache/borg"
-export BORG_CONFIG_DIR="/mnt/tank/local/borg/.config/borg"
+export BORG_CACHE_DIR="/mnt/tank/local/.cache/borg"
+export BORG_CONFIG_DIR="/mnt/tank/local.config/borg"
 
-export BORG_RSH="ssh -i /mnt/tank/local/borg/.ssh/id_ed25519 -p 23 -o ChallengeResponseAuthentication=no -o PasswordAuthentication=no -o BatchMode=yes"
+export BORG_RSH="ssh -i /mnt/tank/local/.ssh/id_ed25519 -p 23 -o ChallengeResponseAuthentication=no -o PasswordAuthentication=no -o BatchMode=yes"
 export BORG_REPO="u123456@u123456.your-storagebox.de:borg"
 
 export BORG_PASSPHRASE="SET_YOUR_PASSPHRASE_HERE"
-export BORG_KEY_FILE="/mnt/tank/local/borg/.config/borg/keys/u123456_your_storagebox_de__borg"
+export BORG_KEY_FILE="/mnt/tank/local/.config/borg/keys/u123456_your_storagebox_de__borg"
 
-/mnt/tank/local/borg/borg-freebsd64 "$@"
+/mnt/tank/local/borg-freebsd64 "$@"
 ````
 
 ### Restore
