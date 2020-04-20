@@ -22,7 +22,7 @@ if [[ "$OHSNAP_DATASET" =~ ^tank/(\..*|backup|local)(/|$) ]]; then
   exit 0
 fi
 
-# Replace slashes in dataset name with a double-underscore
+# Replace slashes in dataset name with a double-colon
 # to form the borg archive name
 archive="${OHSNAP_DATASET////::}"
 
