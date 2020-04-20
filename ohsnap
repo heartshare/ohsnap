@@ -1,0 +1,216 @@
+#!/bin/bash
+
+set -euf -o pipefail
+
+OHSNAP_LOGLEVEL=2
+OHSNAP_RECURSIVE=0
+
+OHSNAP_TIME="$(date +"%Y%m%d.%H%M%S")"
+OHSNAP_TIMESTAMP="$(date -jf "%Y%m%d.%H%M%S" "${OHSNAP_TIME}" +"%Y-%m-%dT%H:%M:%S")"
+OHSNAP_SLUG="ohsnap-${OHSNAP_TIME}-$$"
+
+OHSNAP_MOUNTPOINT=""
+OHSNAP_MOUNTS=()
+
+usage() {
+  echo "usage: $0 [options] [--] DATASET COMMAND"
+  echo "  -r, --recursive   create a recursive snapshot and run the COMMAND once"
+  echo "                    for each created snapshot"
+  echo "  -v, --verbose     increase log verbosity (can be repeated)"
+  echo "  -q, --quiet       don't output anything during normal operation"
+  echo
+  echo "  -h, --help        show this message"
+  echo
+  echo "ohsnap will create a (recursive) snapshot on DATASET and run the given COMMAND"
+  echo "once for DATASET (and possibly each of its child datasets). The COMMAND can"
+  echo "access the following environment variables:"
+  echo "  OHSNAP_DATASET  name of the current dataset (filesystem or volume)"
+  echo "  OHSNAP_SNAPSHOT name of the current snapshot on the DATASET"
+  echo "  OHSNAP_TIME     timestamp of the snapshot in ISO8601 format"
+}
+
+debug() {
+  [[ "$OHSNAP_LOGLEVEL" -le 0 ]] || return 0
+  echo "DEBUG: $1" >&2
+}
+
+info() {
+  [[ "$OHSNAP_LOGLEVEL" -le 1 ]] || return 0
+  echo "INFO: $1" >&2
+}
+
+warn() {
+  [[ "$OHSNAP_LOGLEVEL" -le 2 ]] || return 0
+  echo "WARN: $1" >&2
+}
+
+error() {
+  [[ "$OHSNAP_LOGLEVEL" -le 3 ]] || return 0
+  echo "ERROR: $1" >&2
+}
+
+run() {
+  [[ "$OHSNAP_LOGLEVEL" -le 0 ]] && echo ">> $@" >&2
+  "$@"
+}
+snapshot_create() {
+  OHSNAP_SNAPSHOT="$1@${OHSNAP_SLUG}"
+
+  if [[ "${OHSNAP_RECURSIVE}" = 1 ]]; then
+    info "snapshot:create_recursive ${OHSNAP_SNAPSHOT}"
+    run zfs snapshot -r -- "${OHSNAP_SNAPSHOT}"
+  else
+    info "snapshot:create ${OHSNAP_SNAPSHOT}"
+    run zfs snapshot -- "${OHSNAP_SNAPSHOT}"
+  fi
+}
+
+cleanup_mounts() {
+  for mountpoint in "${OHSNAP_MOUNTS[@]}"; do
+    info "snapshot:umount ${mountpoint}"
+    run umount -f "${mountpoint}"
+  done
+
+  # reset the variable to allow multiple calling of this function if required
+  OHSNAP_MOUNTS=()
+}
+
+cleanup_snapshot() {
+  if [[ -z "${OHSNAP_SNAPSHOT:-}" ]]; then
+    # no snapshot was created, nothing to do
+    return 0
+  fi
+
+  if [[ "${OHSNAP_SNAPSHOT}" != *"@${OHSNAP_SLUG}" ]]; then
+    warn "snapshot:delete NOT deleting phoney snapshot ${OHSNAP_SNAPSHOT}"
+    continue
+  fi
+
+  info "snapshot:delete ${OHSNAP_SNAPSHOT}"
+  run zfs destroy -r -f -- "${OHSNAP_SNAPSHOT}"
+
+  # reset the variable to allow multiple calling of this function if required
+  unset OHSNAP_SNAPSHOT
+}
+
+cleanup() {
+  cleanup_mounts
+  cleanup_snapshot
+}
+trap cleanup EXIT
+
+while :; do
+  case "${1:-}" in
+  -h|-\?|--help)
+    usage
+    exit 0
+    ;;
+  -v|--verbose)
+    [[ "${OHSNAP_LOGLEVEL}" -gt 0 ]] && ((OHSNAP_LOGLEVEL--))
+    ;;
+  -q|--quiet)
+    OHNSAP_LOGLEVEL=4
+    ;;
+
+  -r|--recursive)
+    OHSNAP_RECURSIVE=1
+    ;;
+
+  -m|--mount)
+    if [[ -n "${2:-}" ]] && [[ "$2" != -* ]]; then
+      OHSNAP_MOUNTPOINT="$2"
+      shift
+    else
+      error "\"$1\" requires a directory name argument. See $0 --help"
+      exit 1
+    fi
+    ;;
+
+  --) # end all options parsing
+    shift
+    break
+    ;;
+  -?*)
+    error "Unknown option: $1"
+    exit 1
+    ;;
+  *) # Default case: No more options, so break out of the loop.
+    break
+  esac
+
+  shift
+done
+
+if ! command -v zfs >/dev/null 2>&1; then
+  error "zfs command not found in \$PATH"
+  exit 1
+fi
+
+# if [[ -n "${OHSNAP_MOUNTPOINT}" ]]
+#   if [[ -e "$OHSNAP_MOUNTPOINT" ]]
+#     if ! [[ -d "$OHSNAP_MOUNTPOINT" ]]; then
+#       error "\"$OHSNAP_MOUNTPOINT\" exists but is not a directory!"
+#       exit 1
+#     fi
+#   else
+#     install -d -m 750 "${OHSNAP_MOUNTPOINT}"
+#   fi
+# fi
+
+if [[ "$#" -ge 1 ]]; then
+  OHSNAP_DATASET="$1"
+  shift
+else
+  error "Need to provide a valid ZFS filesystem or volume name. See $0 --help"
+  exit 1
+fi
+
+if ! run zfs list -H -t filesystem,volume -o type -- "${OHSNAP_DATASET}" >/dev/null 2>&1; then
+  error "${OHSNAP_DATASET} does not apear to be a valid ZFS filesystem or volume"
+  exit 1
+fi
+
+COMMAND=( "$@" )
+
+# Create a (recursive) snapshot
+snapshot_create "$OHSNAP_DATASET"
+
+while IFS=$'\n' read -r zfs_snapshot; do
+  zfs_dataset="${zfs_snapshot%%@$OHSNAP_SLUG}"
+
+  if ! run zfs list -H -t filesystem -o type -- "${zfs_dataset}" >/dev/null 2>&1; then
+    warn "Skipping ${zfs_snapshot} as we can only backup filesystems right now."
+    continue
+  fi
+
+  if [[ -n "${OHSNAP_MOUNTPOINT}" ]]; then
+    snapshot_mountpoint="${OHSNAP_MOUNTPOINT}/${zfs_dataset}"
+    info "snapshot:mount ${zfs_snapshot} -> ${snapshot_mountpoint}"
+    run mkdir -p "${snapshot_mountpoint}"
+    run mount -t zfs "${zfs_snapshot}" "${snapshot_mountpoint}"
+    OHSNAP_MOUNTS+=("${snapshot_mountpoint}")
+  elif [[ "$(run zfs get -H -o value snapdir "${zfs_dataset}")" = "visible" ]]; then
+    zfs_mountpoint="$(run zfs get -H -o value mountpoint "${zfs_dataset}")"
+    snapshot_mountpoint="${zfs_mountpoint}/.zfs/snapshot/${OHSNAP_SLUG}"
+    info "snapshot:use ${zfs_snapshot} -> ${snapshot_mountpoint}"
+  else
+    snapshot_mountpoint="$(run mktemp -d "${TMPDIR:-/tmp}/${OHSNAP_SLUG}".XXXXXX)"
+    info "snapshot:mount ${zfs_snapshot} -> ${snapshot_mountpoint}"
+    run mount -t zfs "${zfs_snapshot}" "${snapshot_mountpoint}"
+    OHSNAP_MOUNTS+=("${snapshot_mountpoint}")
+  fi
+
+  if [[ "${#COMMAND[@]}" -gt 0 ]]; then
+    pushd "${snapshot_mountpoint}" > /dev/null
+
+
+    run env \
+      "OHSNAP_DATASET=${zfs_dataset}" \
+      "OHSNAP_SNAPSHOT=${zfs_snapshot}" \
+      "OHSNAP_TIMESTAMP=${OHSNAP_TIMESTAMP}" \
+      "${COMMAND[@]}"
+
+    popd >/dev/null
+    cleanup_mounts
+  fi
+done < <(run zfs list -H -t snapshot -r -o name -- "${OHSNAP_DATASET}" | grep "@${OHSNAP_SLUG}")
