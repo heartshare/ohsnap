@@ -151,17 +151,6 @@ if ! command -v zfs >/dev/null 2>&1; then
   exit 1
 fi
 
-# if [[ -n "${OHSNAP_MOUNTPOINT}" ]]
-#   if [[ -e "$OHSNAP_MOUNTPOINT" ]]
-#     if ! [[ -d "$OHSNAP_MOUNTPOINT" ]]; then
-#       error "\"$OHSNAP_MOUNTPOINT\" exists but is not a directory!"
-#       exit 1
-#     fi
-#   else
-#     install -d -m 750 "${OHSNAP_MOUNTPOINT}"
-#   fi
-# fi
-
 if [[ "$#" -ge 1 ]]; then
   OHSNAP_DATASET="$1"
   shift
@@ -208,7 +197,6 @@ while IFS=$'\n' read -r zfs_snapshot; do
   if [[ "${#COMMAND[@]}" -gt 0 ]]; then
     pushd "${snapshot_mountpoint}" > /dev/null
 
-
     run env \
       "OHSNAP_DATASET=${zfs_dataset}" \
       "OHSNAP_SNAPSHOT=${zfs_snapshot}" \
@@ -216,6 +204,7 @@ while IFS=$'\n' read -r zfs_snapshot; do
       "${COMMAND[@]}"
 
     popd >/dev/null
-    cleanup_mounts
   fi
+
+  cleanup_mounts
 done < <(run zfs list -H -t snapshot -r -o name -- "${OHSNAP_DATASET}" | grep "@${OHSNAP_SLUG}")
