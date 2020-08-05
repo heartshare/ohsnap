@@ -90,7 +90,7 @@ cleanup_snapshot() {
 
   if [[ "${OHSNAP_SNAPSHOT}" != *"@${OHSNAP_SLUG}" ]]; then
     warn "snapshot:delete NOT deleting phoney snapshot ${OHSNAP_SNAPSHOT}"
-    continue
+    return
   fi
 
   info "snapshot:delete ${OHSNAP_SNAPSHOT}"
