@@ -21,6 +21,8 @@ usage() {
   echo "usage: $0 [options] [--] DATASET COMMAND"
   echo "  -r, --recursive   create a recursive snapshot and run the COMMAND once"
   echo "                    for each created snapshot"
+  echo "  -m MOUNTPOINT, --mount MOUNTPOINT"
+  echo "                    mount each snapshot using the MOUNTPOINT as a base directory"
   echo "  -v, --verbose     increase log verbosity (can be repeated)"
   echo "  -q, --quiet       don't output anything during normal operation"
   echo
