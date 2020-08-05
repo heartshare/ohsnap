@@ -116,7 +116,7 @@ while :; do
     [[ "${OHSNAP_LOGLEVEL}" -gt 0 ]] && ((OHSNAP_LOGLEVEL--))
     ;;
   -q|--quiet)
-    OHNSAP_LOGLEVEL=4
+    OHSNAP_LOGLEVEL=4
     ;;
 
   -r|--recursive)
