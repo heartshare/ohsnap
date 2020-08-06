@@ -17,6 +17,8 @@ See `ohsnap --help` for details.
 For this to work, you need a backup script to handle each snapshot. This script can look as follows. Of course, you can adapt it according to your specific needs. According to the above invocation, this script is in `/mnt/tank/local/backup_dataset`.
 
 ```shell
+#!/bin/sh
+
 BORG="/mnt/tank/local/borg_wrapper"
 
 if [[ "$OHSNAP_DATASET" =~ ^tank/(\..*|backup|local)(/|$) ]]; then
