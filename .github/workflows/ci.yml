@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+  schedule:
+    - cron: '0 7 * * SUN'
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ludeeus/action-shellcheck@master
+        name: Run ShellCheck
