@@ -1,5 +1,7 @@
 # OHSNAP
 
+[![CI](https://github.com/meineerde/ohsnap/workflows/CI/badge.svg)](https://github.com/meineerde/ohsnap/actions?query=workflow%3ACI)
+
 A tool to (recursively) create ZFS snapshots and run a script for each such snapshot (e.g. to create a backup). After all snapshots were handled, they are deleted again.
 
 This tool is especially useful to create backups with [borg](https://borgbackup.readthedocs.io/) or other tools.
