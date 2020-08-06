@@ -57,9 +57,10 @@ error() {
 }
 
 run() {
-  [[ "$OHSNAP_LOGLEVEL" -le 0 ]] && echo ">> $@" >&2
+  [[ "$OHSNAP_LOGLEVEL" -le 0 ]] && echo ">> $*" >&2
   "$@"
 }
+
 snapshot_create() {
   OHSNAP_SNAPSHOT="$1@${OHSNAP_SLUG}"
 
